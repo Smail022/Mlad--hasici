@@ -20,7 +20,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #joy{position:absolute;left:18px;bottom:20px;width:150px;height:150px;border:2px solid #ffffff55;border-radius:50%;background:#101820aa;pointer-events:auto}.knob{position:absolute;width:56px;height:56px;left:45px;top:45px;border:2px solid #ffffff99;border-radius:50%;background:#ffffff24}
 .actions{position:absolute;right:16px;bottom:18px;display:flex;gap:10px;pointer-events:auto;align-items:end}.btn{width:80px;height:80px;border-radius:50%;background:#101820e8;border:2px solid #ffffff55;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:12px}.act{width:98px;height:98px;background:#d71d1de8}
 .tip{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:8px 14px;font-size:12px;white-space:nowrap}
-#start{position:fixed;inset:0;z-index:20;background:rgba(4,14,22,.90);display:flex;align-items:center;justify-content:center;padding:20px}.start{width:min(540px,92vw);padding:28px;text-align:center}.start h1{margin:0 0 10px;font-size:30px}.start p{color:#dbe4e9;line-height:1.5}.play{border:0;border-radius:14px;background:#d71916;color:#fff;font-size:19px;font-weight:800;padding:15px 30px}
+#start{position:fixed;inset:0;z-index:20;background:rgba(4,14,22,.90);display:flex;align-items:center;justify-content:center;padding:20px}.start{width:min(540px,92vw);padding:28px;text-align:center}.start h1{margin:0 0 10px;font-size:30px}.start p{color:#dbe4e9;line-height:1.5}.play{border:0;border-radius:14px;background:#d71916;color:#fff;font-size:19px;font-weight:800;padding:15px 30px;cursor:pointer;-webkit-appearance:none}#startToggle:checked~#start{display:none!important}
 @media(max-width:700px){.top .card:nth-child(3){display:none}.tasks{width:265px}.side{width:150px}.big{font-size:15px}}
 </style>
 </head>
@@ -43,7 +43,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div class="actions"><div class="btn" id="run">🏃<br>BĚŽET</div><div class="btn act" id="interact">✋<br>INTERAKCE</div></div>
 <div class="panel tip" id="tip">Pohybuj joystickem · přijď k postavě / vybavení · <b>INTERAKCE</b></div>
 </div>
-<div id="start"><div class="panel start"><h1>🚒 MLADÍ HASIČI</h1><p>V8 je úplně samostatná verze bez Three.js, bez importů a bez externích souborů. Celá herní scéna se kreslí přímo v telefonu.</p><button class="play" id="play">SPUSTIT HRU</button></div></div>
+<input id="startToggle" type="checkbox" hidden><div id="start"><div class="panel start"><h1>🚒 MLADÍ HASIČI</h1><p>V8 je úplně samostatná verze bez Three.js, bez importů a bez externích souborů. Celá herní scéna se kreslí přímo v telefonu.</p><label class="play" id="play" for="startToggle">SPUSTIT HRU</label></div></div>
 
 <script>
 (function(){
@@ -185,7 +185,7 @@ document.getElementById("interact").addEventListener("pointerup",()=>{
  else if(best.kind==="training"){document.getElementById("dn").textContent="🏃 Požární útok";document.getElementById("dt").textContent="Trať je připravená. Můžeš zahájit trénink."}
  else {document.getElementById("dn").textContent="🧰 Vybavení";document.getElementById("dt").textContent="PS 12, hadice a proudnice jsou zkontrolované a připravené."}
 });
-document.getElementById("play").addEventListener("pointerup",()=>document.getElementById("start").style.display="none");
+document.getElementById("play").addEventListener("click",()=>document.getElementById("start").style.display="none");
 
 // menus
 const menus={
