@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Mladí hasiči – hratelná verze</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#6eaed8;font-family:Arial,sans-serif;touch-action:none}
+body{position:fixed;inset:0}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font:inherit}
+.hud{position:fixed;inset:0;pointer-events:none;color:#fff}
+.panel{background:rgba(7,18,28,.84);border:1px solid rgba(255,255,255,.27);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(8px);border-radius:18px}
+.top{position:absolute;left:10px;right:10px;top:9px;display:flex;gap:7px}
+.card{flex:1;padding:8px 11px;min-width:0}.small{font-size:10px;color:#cbd6dc}.big{font-size:18px;font-weight:800;white-space:nowrap}.green{color:#4fee78}
+.tasks{position:absolute;left:10px;top:91px;width:330px;padding:12px}.tasks h2{margin:0 0 8px;font-size:21px}.task{font-size:14px;padding:10px 2px;border-top:1px solid #ffffff22}.done{color:#4fee78}
+.side{position:absolute;right:10px;top:91px;width:172px;overflow:hidden}.nav{pointer-events:auto;padding:13px;border-bottom:1px solid #ffffff22;font-size:14px;cursor:pointer}.nav:active{background:#ffffff18}
+.window{display:none;position:absolute;right:10px;top:280px;width:310px;padding:16px;pointer-events:auto}.window h3{margin:0 0 8px}.close{float:right;font-size:25px;cursor:pointer}.line{border-top:1px solid #ffffff22;padding:9px 0}
+.dialog{display:none;position:absolute;left:50%;bottom:105px;transform:translateX(-50%);width:min(620px,86vw);padding:14px 18px}
+.dialog b{display:block;margin-bottom:5px}
+#joy{position:absolute;left:18px;bottom:20px;width:150px;height:150px;border:2px solid #ffffff55;border-radius:50%;background:#101820aa;pointer-events:auto}
+.knob{position:absolute;width:56px;height:56px;left:45px;top:45px;border:2px solid #ffffff99;border-radius:50%;background:#ffffff24}
+.actions{position:absolute;right:16px;bottom:18px;display:flex;gap:10px;pointer-events:auto;align-items:end}
+.btn{width:80px;height:80px;border-radius:50%;background:#101820e8;border:2px solid #ffffff55;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:12px;cursor:pointer;user-select:none}
+.act{width:98px;height:98px;background:#d71d1de8}
+.tip{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:8px 14px;font-size:12px;white-space:nowrap}
+#start{position:fixed;inset:0;z-index:50;background:rgba(4,14,22,.90);display:flex;align-items:center;justify-content:center;padding:20px;pointer-events:auto}
+.start{width:min(540px,92vw);padding:28px;text-align:center}
+.start h1{margin:0 0 10px;font-size:30px}.start p{color:#dbe4e9;line-height:1.5}
+.play{display:block;width:100%;border:0;border-radius:14px;background:#e11;color:#fff;font-size:19px;font-weight:800;padding:17px 30px;cursor:pointer;touch-action:manipulation}
+@media(max-width:700px){.top .card:nth-child(3){display:none}.tasks{width:265px}.side{width:150px}.big{font-size:15px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="top">
+    <div class="panel card"><div class="small">👨‍🚒 VEDOUCÍ MH</div><div class="big">Jan Egermayer</div><div class="small">Úroveň 1 · <span id="xp">150</span>/500 XP</div></div>
+    <div class="panel card"><div class="small">💰 ROZPOČET</div><div class="big green">15 250 Kč</div><div class="small">+2 800 Kč / týden</div></div>
+    <div class="panel card"><div class="small">☀️ SOBOTA</div><div class="big">10:32</div><div class="small">18 °C · slunečno</div></div>
+    <div class="panel card"><div class="small">⭐ REPUTACE</div><div class="big" id="rep">120</div><div class="small">Respekt v okrese</div></div>
+  </div>
+
+  <div class="panel tasks">
+    <h2>ÚKOLY</h2>
+    <div class="task" id="t0">○ Promluv si s dětmi</div>
+    <div class="task" id="t1">○ Připrav trénink požárního útoku</div>
+    <div class="task" id="t2">○ Zkontroluj vybavení</div>
+    <div class="small" style="margin-top:8px">Odměna: <span class="green">+200 Kč</span></div>
+  </div>
+
+  <div class="panel side">
+    <div class="nav" data-m="kids">👥 DĚTI</div>
+    <div class="nav" data-m="training">🏃 TRÉNINK</div>
+    <div class="nav" data-m="gear">🧰 VYBAVENÍ</div>
+    <div class="nav" data-m="station">🏠 ZBROJNICE</div>
+    <div class="nav" data-m="plan">📅 PLÁN</div>
+    <div class="nav" data-m="settings">⚙️ NASTAVENÍ</div>
+  </div>
+
+  <div class="panel window" id="window">
+    <span class="close" id="close">×</span>
+    <h3 id="wt"></h3>
+    <div id="wb"></div>
+  </div>
+
+  <div class="panel dialog" id="dialog"><b id="dn"></b><span id="dt"></span></div>
+
+  <div id="joy"><div class="knob" id="knob"></div></div>
+  <div class="actions">
+    <div class="btn" id="run">🏃<br>BĚŽET</div>
+    <div class="btn act" id="interact">✋<br>INTERAKCE</div>
+  </div>
+  <div class="panel tip" id="tip">Pohybuj joystickem · přijď k postavě / vybavení · <b>INTERAKCE</b></div>
+</div>
+
+<div id="start">
+  <div class="panel start">
+    <h1>🚒 MLADÍ HASIČI</h1>
+    <p>Hratelný 3D stylizovaný areál mladých hasičů. Postavy, zbrojnice, auto, trénink, vybavení a úkoly jsou skutečné herní objekty kreslené přímo v telefonu.</p>
+    <button type="button" class="play" id="play">SPUSTIT HRU</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const cv=document.getElementById("c"),ctx=cv.getContext("2d");
+let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2);
+function resize(){
+  W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  cv.style.width=W+"px";cv.style.height=H+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize);resize();
+
+const world={w:1600,h:1200};
+const player={x:800,y:930};
+const kids=[
+{x:690,y:580,name:"Tomáš",role:"útočník"},
+{x:790,y:545,name:"Eliška",role:"spojkařka"},
+{x:900,y:600,name:"Matěj",role:"útočník"},
+{x:1010,y:545,name:"Anna",role:"béčkařka"},
+{x:1120,y:630,name:"Petr",role:"nosič"},
+{x:610,y:690,name:"Kuba",role:"strojník"}
+];
+const interactables=[
+{x:1010,y:800,type:"gear",label:"Vybavení"},
+{x:580,y:500,type:"training",label:"Požární útok"}
+];
+
+let joyX=0,joyY=0,running=false,camX=800,camY=930,last=performance.now();
+const done=[false,false,false];
+
+function project(x,y){
+  return {x:(x-camX)+W/2,y:(y-camY)+H/2};
+}
+function roundedRect(x,y,w,h,r,fill){
+  ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();
+}
+
+function drawWorld(t){
+  ctx.clearRect(0,0,W,H);
+
+  // sky
+  ctx.fillStyle="#72b5dc";ctx.fillRect(0,0,W,H);
+  // hills
+  ctx.fillStyle="#47794d";
+  ctx.beginPath();ctx.moveTo(0,H*.32);ctx.quadraticCurveTo(W*.25,H*.17,W*.5,H*.31);
+  ctx.quadraticCurveTo(W*.76,H*.15,W,H*.29);ctx.lineTo(W,H*.52);ctx.lineTo(0,H*.52);ctx.fill();
+
+  // grass
+  ctx.fillStyle="#34783d";ctx.fillRect(0,H*.34,W,H*.66);
+
+  // road
+  ctx.fillStyle="#555b5e";ctx.fillRect(0,H*.47,W,H*.37);
+  ctx.fillStyle="#d8d2c7";ctx.fillRect(0,H*.78,W,H*.025);
+
+  // station
+  let s=project(230,350);
+  ctx.fillStyle="#c6bba9";ctx.fillRect(s.x,s.y,390,220);
+  ctx.fillStyle="#a71914";ctx.fillRect(s.x,s.y+118,390,24);
+  for(let i=0;i<3;i++){ctx.fillStyle="#d71916";ctx.fillRect(s.x+20+i*125,s.y+48,105,120)}
+  ctx.fillStyle="#a61a15";ctx.font="bold 25px Arial";ctx.fillText("HASIČSKÁ ZBROJNICE",s.x+42,s.y+35);
+
+  // tower
+  let tw=project(550,315);
+  ctx.strokeStyle="#8e6e42";ctx.lineWidth=8;ctx.strokeRect(tw.x,tw.y,105,260);
+  ctx.lineWidth=3;
+  for(let y=tw.y+30;y<tw.y+245;y+=35){ctx.beginPath();ctx.moveTo(tw.x,y);ctx.lineTo(tw.x+105,y);ctx.stroke()}
+
+  // fire engine
+  let tr=project(280,650);
+  ctx.fillStyle="#c91411";ctx.fillRect(tr.x,tr.y,310,105);
+  ctx.fillStyle="#e21b17";ctx.fillRect(tr.x+205,tr.y-62,105,62);
+  ctx.fillStyle="#87c7dc";ctx.fillRect(tr.x+220,tr.y-50,72,42);
+  ctx.fillStyle="#1a1e21";
+  for(let i=0;i<2;i++){ctx.beginPath();ctx.arc(tr.x+55+i*200,tr.y+105,30,0,Math.PI*2);ctx.fill()}
+
+  // training wall
+  let ob=project(1100,330);
+  ctx.fillStyle="#8e5b3b";ctx.fillRect(ob.x,ob.y,150,190);
+  ctx.fillStyle="#b8794c";ctx.fillRect(ob.x+15,ob.y+15,120,160);
+
+  // pump and hose
+  let pu=project(1030,790);
+  ctx.fillStyle="#9b633e";ctx.fillRect(pu.x-120,pu.y-20,240,95);
+  ctx.fillStyle="#d71916";ctx.fillRect(pu.x-40,pu.y-70,80,70);
+  ctx.fillStyle="#62686b";ctx.beginPath();ctx.arc(pu.x,pu.y-70,42,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#4d914d";ctx.lineWidth=22;ctx.beginPath();ctx.moveTo(pu.x-250,pu.y+50);ctx.lineTo(pu.x+220,pu.y+50);ctx.stroke();
+
+  // cones
+  for(let i=0;i<8;i++){
+    let p=project(620+i*85,760+(i%2)*55);
+    ctx.fillStyle="#e54a21";ctx.beginPath();ctx.moveTo(p.x,p.y-28);ctx.lineTo(p.x-16,p.y+8);ctx.lineTo(p.x+16,p.y+8);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#fff";ctx.fillRect(p.x-11,p.y-8,22,7);
+  }
+
+  // trees
+  for(let i=0;i<24;i++){
+    let x=40+(i*149)%1520,y=100+(i*97)%930;
+    if(x>200&&x<650&&y<560)continue;
+    let p=project(x,y);
+    ctx.fillStyle="#765035";ctx.fillRect(p.x-6,p.y-35,12,42);
+    ctx.fillStyle="#2d7137";ctx.beginPath();ctx.arc(p.x,p.y-55,35,0,Math.PI*2);ctx.fill();
+  }
+
+  // interaction markers
+  function marker(o,color){
+    let p=project(o.x,o.y),pulse=5+Math.sin(t/250)*3;
+    ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y+24,22+pulse,0,Math.PI*2);ctx.stroke();
+  }
+  kids.forEach(k=>marker(k,"#4fee78"));
+  interactables.forEach(o=>marker(o,o.type==="gear"?"#ffd34b":"#55aaff"));
+
+  kids.forEach((k,i)=>drawPerson(k.x,k.y,false,k.name,t+i*120));
+  drawPerson(player.x,player.y,true,"Jan",t);
+}
+
+function drawPerson(x,y,leader,name,t){
+  let p=project(x,y),scale=leader?1.12:.86,bob=Math.sin(t/180)*2;
+  ctx.fillStyle="#0005";ctx.beginPath();ctx.ellipse(p.x,p.y+34,25*scale,10*scale,0,0,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle="#182028";
+  ctx.fillRect(p.x-15*scale,p.y-2*scale+bob,12*scale,36*scale);
+  ctx.fillRect(p.x+3*scale,p.y-2*scale+bob,12*scale,36*scale);
+  ctx.fillRect(p.x-18*scale,p.y+29*scale+bob,17*scale,9*scale);
+  ctx.fillRect(p.x+3*scale,p.y+29*scale+bob,17*scale,9*scale);
+
+  ctx.fillStyle=leader?"#101b27":"#145fae";
+  roundedRect(p.x-29*scale,p.y-55*scale+bob,58*scale,63*scale,12*scale,ctx.fillStyle);
+  ctx.fillStyle="#f3f3ed";
+  ctx.fillRect(p.x-29*scale,p.y-12*scale+bob,58*scale,7*scale);
+
+  ctx.strokeStyle="#c98c68";ctx.lineWidth=10*scale;ctx.lineCap="round";ctx.beginPath();
+  ctx.moveTo(p.x-28*scale,p.y-39*scale+bob);ctx.lineTo(p.x-39*scale,p.y+2*scale+bob);
+  ctx.moveTo(p.x+28*scale,p.y-39*scale+bob);ctx.lineTo(p.x+39*scale,p.y+2*scale+bob);ctx.stroke();
+
+  ctx.fillStyle="#c98c68";ctx.beginPath();ctx.arc(p.x,p.y-72*scale+bob,23*scale,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#2b211c";ctx.beginPath();ctx.arc(p.x,p.y-83*scale+bob,21*scale,Math.PI,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle="#d71916";ctx.beginPath();ctx.ellipse(p.x,p.y-93*scale+bob,28*scale,15*scale,0,Math.PI,Math.PI*2);ctx.fill();
+  ctx.fillRect(p.x-30*scale,p.y-94*scale+bob,60*scale,7*scale);
+
+  ctx.fillStyle="#1b2023";ctx.beginPath();
+  ctx.arc(p.x-8*scale,p.y-72*scale+bob,2.4*scale,0,Math.PI*2);
+  ctx.arc(p.x+8*scale,p.y-72*scale+bob,2.4*scale,0,Math.PI*2);ctx.fill();
+
+  if(leader){ctx.fillStyle="#fff";ctx.font="bold 9px Arial";ctx.textAlign="center";ctx.fillText("VEDOUCÍ",p.x,p.y-18)}
+}
+
+function update(dt){
+  const speed=(running?260:135)*dt;
+  player.x=Math.max(40,Math.min(1560,player.x+joyX*speed));
+  player.y=Math.max(80,Math.min(1120,player.y+joyY*speed));
+  camX+=(player.x-camX)*.10;
+  camY+=(player.y-camY)*.10;
+}
+
+function loop(now){
+  const dt=Math.min(.04,(now-last)/1000);last=now;
+  update(dt);drawWorld(now);requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// START — intentionally uses a real button, not a label/checkbox.
+document.getElementById("play").addEventListener("click",startGame);
+document.getElementById("play").addEventListener("touchend",function(e){
+  e.preventDefault();startGame();
+},{passive:false});
+
+function startGame(){
+  const start=document.getElementById("start");
+  start.style.display="none";
+  start.remove();
+  last=performance.now();
+}
+
+// joystick
+const joy=document.getElementById("joy"),knob=document.getElementById("knob");
+function setJoy(e){
+  const r=joy.getBoundingClientRect();
+  let x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),d=Math.hypot(x,y),m=49;
+  if(d>m){x=x/d*m;y=y/d*m}
+  joyX=x/m;joyY=y/m;
+  knob.style.transform=`translate(${x}px,${y}px)`;
+}
+joy.addEventListener("pointerdown",e=>{joy.setPointerCapture(e.pointerId);setJoy(e)});
+joy.addEventListener("pointermove",e=>{if(e.buttons)setJoy(e)});
+function stopJoy(){joyX=joyY=0;knob.style.transform="translate(0,0)"}
+joy.addEventListener("pointerup",stopJoy);joy.addEventListener("pointercancel",stopJoy);
+
+// run
+const run=document.getElementById("run");
+run.addEventListener("pointerdown",()=>running=true);
+run.addEventListener("pointerup",()=>running=false);
+run.addEventListener("pointercancel",()=>running=false);
+
+// interaction
+function complete(i){
+  if(done[i])return;
+  done[i]=true;
+  const labels=["Promluv si s dětmi","Připrav trénink požárního útoku","Zkontroluj vybavení"];
+  document.getElementById("t"+i).textContent="✓ "+labels[i];
+  document.getElementById("t"+i).classList.add("done");
+  document.getElementById("xp").textContent=Number(document.getElementById("xp").textContent)+70;
+  document.getElementById("rep").textContent=Number(document.getElementById("rep").textContent)+5;
+}
+
+document.getElementById("interact").addEventListener("pointerup",()=>{
+  let best=null,d=999;
+  kids.forEach((k,i)=>{
+    let q=Math.hypot(player.x-k.x,player.y-k.y);
+    if(q<d){d=q;best={kind:"kid",o:k,i:0}}
+  });
+  interactables.forEach(o=>{
+    let q=Math.hypot(player.x-o.x,player.y-o.y);
+    if(q<d){d=q;best={kind:o.type,o,i:o.type==="gear"?2:1}}
+  });
+
+  if(!best||d>100){
+    document.getElementById("tip").textContent="Přijď blíž k postavě nebo vybavení.";
+    setTimeout(()=>document.getElementById("tip").innerHTML="Pohybuj joystickem · přijď k postavě / vybavení · <b>INTERAKCE</b>",1400);
+    return;
+  }
+
+  complete(best.i);
+  const dialog=document.getElementById("dialog");
+  dialog.style.display="block";
+
+  if(best.kind==="kid"){
+    document.getElementById("dn").textContent=best.o.name+" – mladý hasič";
+    document.getElementById("dt").textContent="Ahoj vedoucí! Jsme připraveni. Co dneska potrénujeme?";
+  }else if(best.kind==="training"){
+    document.getElementById("dn").textContent="🏃 Požární útok";
+    document.getElementById("dt").textContent="Trať je připravená. Můžeš zahájit trénink.";
+  }else{
+    document.getElementById("dn").textContent="🧰 Vybavení";
+    document.getElementById("dt").textContent="PS 12, hadice a proudnice jsou zkontrolované a připravené.";
+  }
+});
+
+// menus
+const menus={
+kids:["DĚTI","Tomáš · 11 let · útočník","Eliška · 12 let · spojkařka","Matěj · 10 let · útočník","Anna · 13 let · béčkařka","Petr · 9 let · nosič","Kuba · 12 let · strojník"],
+training:["TRÉNINK","Požární útok","Běh 60 m","Překážková dráha","Štafeta 4×60 m"],
+gear:["VYBAVENÍ","PS 12 · připravena","Hadice B · 4 ks","Hadice C · 6 ks","Proudnice · 3 ks"],
+station:["ZBROJNICE","CAS · připravena","PS 12 · připravena","Sklad hadic","Přilby · 8 ks"],
+plan:["PLÁN","Sobota 10:00 · požární útok","Středa 17:00 · kondice","Za 14 dní · okresní kolo"],
+settings:["NASTAVENÍ","Grafika · vysoká","Zvuk · zapnuto","Citlivost joysticku · 100 %"]
+};
+
+document.querySelectorAll(".nav").forEach(n=>n.addEventListener("pointerup",()=>{
+  const a=menus[n.dataset.m];
+  document.getElementById("wt").textContent=a[0];
+  document.getElementById("wb").innerHTML=a.slice(1).map(x=>"<div class='line'>"+x+"</div>").join("");
+  document.getElementById("window").style.display="block";
+}));
+document.getElementById("close").addEventListener("pointerup",()=>document.getElementById("window").style.display="none");
+
+})();
+</script>
+</body>
+</html>
